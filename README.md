@@ -15,6 +15,7 @@ If you want to add new analyzers or make changes to exsiting fields, you need to
 ### Issues/Questions
 
 Please file an [issue](https://github.com/codelibs/elasticsearch-reindexing/issues "issue").
+(Japanese forum is [here](https://github.com/codelibs/codelibs-ja-forum "here").)
 
 ## Installation
 
