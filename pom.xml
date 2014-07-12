@@ -16,6 +16,16 @@
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
+	<scm>
+		<connection>scm:git:git@github.com:codelibs/elasticsearch-reindexing.git</connection>
+		<developerConnection>scm:git:git@github.com:codelibs/elasticsearch-reindexing.git</developerConnection>
+		<url>git@github.com:codelibs/elasticsearch-reindexing.git</url>
+	</scm>
+	<parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent>
 	<properties>
 		<elasticsearch.version>1.2.2</elasticsearch.version>
 	</properties>
