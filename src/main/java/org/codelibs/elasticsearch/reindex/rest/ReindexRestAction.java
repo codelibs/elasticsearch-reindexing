@@ -50,7 +50,7 @@ public class ReindexRestAction extends BaseRestHandler {
 
     @Override
     protected void handleRequest(final RestRequest request,
-            final RestChannel channel, final Client client) throws Exception {
+            final RestChannel channel, final Client client) {
         String name;
         Map<String, Object> params;
         try {
@@ -64,7 +64,7 @@ public class ReindexRestAction extends BaseRestHandler {
                     params.put("name", name);
                     params.put("found", reindexingService.exists(name));
                 }
-                sendResponse(channel, params);
+                sendResponse(request, channel, params);
                 break;
             case POST:
                 final boolean waitForCompletion = request.paramAsBoolean(
@@ -75,7 +75,7 @@ public class ReindexRestAction extends BaseRestHandler {
                             @Override
                             public void onResponse(final Void response) {
                                 if (waitForCompletion) {
-                                    sendResponse(channel, null);
+                                    sendResponse(request, channel, null);
                                 }
                             }
 
@@ -89,7 +89,7 @@ public class ReindexRestAction extends BaseRestHandler {
                 if (!waitForCompletion) {
                     params = new LinkedHashMap<String, Object>();
                     params.put("name", name);
-                    sendResponse(channel, params);
+                    sendResponse(request, channel, params);
                 }
                 break;
             case DELETE:
@@ -97,7 +97,7 @@ public class ReindexRestAction extends BaseRestHandler {
                 params = new LinkedHashMap<String, Object>();
                 params.put("name", name);
                 reindexingService.delete(name);
-                sendResponse(channel, params);
+                sendResponse(request, channel, params);
                 break;
             default:
                 sendErrorResponse(channel, new ReindexingException(
@@ -109,10 +109,13 @@ public class ReindexRestAction extends BaseRestHandler {
         }
     }
 
-    private void sendResponse(final RestChannel channel,
-            final Map<String, Object> params) {
+    private void sendResponse(final RestRequest request,
+            final RestChannel channel, final Map<String, Object> params) {
         try {
             final XContentBuilder builder = JsonXContent.contentBuilder();
+            if (request.hasParam("pretty")) {
+                builder.prettyPrint().lfAtEnd();
+            }
             builder.startObject();
             builder.field("acknowledged", true);
             if (params != null) {
