@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.codelibs</groupId>
 	<artifactId>elasticsearch-reindexing</artifactId>
-	<version>1.3.0-SNAPSHOT</version>
+	<version>1.3.0</version>
 	<packaging>jar</packaging>
 	<description>elasticsearch elasticsearch-reindexing plugin</description>
 	<inceptionYear>2014</inceptionYear>
