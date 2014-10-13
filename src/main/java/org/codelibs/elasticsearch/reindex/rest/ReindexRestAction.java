@@ -27,7 +27,7 @@ public class ReindexRestAction extends BaseRestHandler {
     public ReindexRestAction(final Settings settings, final Client client,
             final RestController restController,
             final ReindexingService reindexingService) {
-        super(settings, client);
+        super(settings, restController, client);
         this.reindexingService = reindexingService;
 
         restController.registerHandler(RestRequest.Method.GET,
