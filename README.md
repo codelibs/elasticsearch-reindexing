@@ -8,9 +8,10 @@ If you want to add new analyzers or make changes to exsiting fields, you need to
 
 ## Version
 
-| River Web | elasticsearch |
+| Version   | elasticsearch |
 |:---------:|:-------------:|
-| master    | 1.3.X         |
+| master    | 1.4.X         |
+| 1.4.0     | 1.4.0.Beta1   |
 | 1.3.0     | 1.3.0         |
 
 ### Issues/Questions
@@ -20,7 +21,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-reindexing/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.3.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.4.0
 
 ## Usage
 
