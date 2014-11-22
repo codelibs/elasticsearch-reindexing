@@ -12,6 +12,7 @@
 			<useTransitiveFiltering>true</useTransitiveFiltering>
 			<excludes>
 				<exclude>org.elasticsearch:elasticsearch</exclude>
+				<exclude>org.codelibs:elasticsearch-cluster-runner</exclude>
 			</excludes>
 		</dependencySet>
 	</dependencySets>

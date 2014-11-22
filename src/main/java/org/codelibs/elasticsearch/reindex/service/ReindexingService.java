@@ -1,11 +1,19 @@
 package org.codelibs.elasticsearch.reindex.service;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.codelibs.elasticsearch.reindex.exception.ReindexingException;
+import org.codelibs.elasticsearch.runner.net.Curl;
+import org.codelibs.elasticsearch.runner.net.CurlException;
+import org.codelibs.elasticsearch.runner.net.CurlRequest;
+import org.codelibs.elasticsearch.runner.net.CurlRequest.ConnectionBuilder;
 import org.codelibs.elasticsearch.util.lang.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
@@ -35,22 +43,26 @@ public class ReindexingService extends
     public ReindexingService(final Settings settings, final Client client) {
         super(settings);
         this.client = client;
-        logger.info("CREATE ReindexingService");
     }
 
     @Override
     protected void doStart() throws ElasticsearchException {
-        logger.info("START ReindexingService");
+        if (logger.isDebugEnabled()) {
+            logger.debug("Starting ReindexingService");
+        }
     }
 
     @Override
     protected void doStop() throws ElasticsearchException {
-        logger.info("STOP ReindexingService");
+        logger.info("Stopping ReindexingService...");
+        for (ReindexingListener listener : reindexingListenerMap.values()) {
+            listener.interrupt();
+        }
     }
 
     @Override
     protected void doClose() throws ElasticsearchException {
-        logger.info("CLOSE ReindexingService");
+        // nothing
     }
 
     public boolean exists(final String name) {
@@ -75,13 +87,14 @@ public class ReindexingService extends
 
     public String execute(final Params params, final BytesReference content,
             final ActionListener<Void> listener) {
+        final String url = params.param("url");
         final String scroll = params.param("scroll");
         final String fromIndex = params.param("index");
         final String fromType = params.param("type");
         final String toIndex = params.param("toindex");
         final String toType = params.param("totype");
         final ReindexingListener reindexingListener = new ReindexingListener(
-                toIndex, toType, scroll, listener);
+                url, toIndex, toType, scroll, listener);
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
                 .setSearchType(SearchType.SCAN).setScroll(scroll)
                 .setListenerThreaded(true);
@@ -105,6 +118,8 @@ public class ReindexingService extends
 
         private AtomicBoolean interrupted = new AtomicBoolean(false);
 
+        private String url;
+
         private String toIndex;
 
         private String toType;
@@ -115,8 +130,10 @@ public class ReindexingService extends
 
         private ActionListener<Void> listener;
 
-        ReindexingListener(final String toIndex, final String toType,
-                final String scroll, final ActionListener<Void> listener) {
+        ReindexingListener(final String url, final String toIndex,
+                final String toType, final String scroll,
+                final ActionListener<Void> listener) {
+            this.url = url != null && !url.endsWith("/") ? url + "/" : url;
             this.toIndex = toIndex;
             this.toType = toType;
             this.scroll = scroll;
@@ -146,32 +163,96 @@ public class ReindexingService extends
             if (hits.length == 0) {
                 delete(name);
                 listener.onResponse(null);
+            } else if (url != null) {
+                sendToRemoteCluster(response, hits);
             } else {
-                final BulkRequestBuilder bulkRequest = client.prepareBulk();
-                for (final SearchHit hit : hits) {
-                    bulkRequest.add(client.prepareIndex(toIndex,
-                            toType != null ? toType : hit.getType(),
-                            hit.getId()).setSource(hit.getSource()));
+                sendToLocalCluster(response, hits);
+            }
+        }
+
+        private void sendToLocalCluster(final SearchResponse response,
+                final SearchHit[] hits) {
+            final BulkRequestBuilder bulkRequest = client.prepareBulk();
+            for (final SearchHit hit : hits) {
+                bulkRequest.add(client.prepareIndex(toIndex,
+                        toType != null ? toType : hit.getType(), hit.getId())
+                        .setSource(hit.getSource()));
+            }
+
+            bulkRequest.execute(new ActionListener<BulkResponse>() {
+                @Override
+                public void onResponse(final BulkResponse bulkResponse) {
+                    if (bulkResponse.hasFailures()) {
+                        throw new ReindexingException(bulkResponse
+                                .buildFailureMessage());
+                    }
+                    client.prepareSearchScroll(response.getScrollId())
+                            .setScroll(scroll).setListenerThreaded(true)
+                            .execute(ReindexingListener.this);
                 }
 
-                bulkRequest.execute(new ActionListener<BulkResponse>() {
+                @Override
+                public void onFailure(final Throwable e) {
+                    ReindexingListener.this.onFailure(e);
+                }
+            });
+        }
 
+        private void sendToRemoteCluster(final SearchResponse response,
+                final SearchHit[] hits) {
+            try {
+                Curl.post(url + "_bulk").onConnect(new ConnectionBuilder() {
                     @Override
-                    public void onResponse(final BulkResponse bulkResponse) {
-                        if (bulkResponse.hasFailures()) {
-                            throw new ReindexingException(bulkResponse
-                                    .buildFailureMessage());
+                    public void onConnect(CurlRequest curlRequest,
+                            HttpURLConnection connection) {
+                        connection.setDoOutput(true);
+                        try (BufferedWriter writer = new BufferedWriter(
+                                new OutputStreamWriter(connection
+                                        .getOutputStream(), curlRequest
+                                        .encoding()))) {
+                            for (final SearchHit hit : hits) {
+                                String source = hit.getSourceAsString();
+                                if (source != null) {
+                                    String header = "{\"index\":{\"_index\":\""
+                                            + toIndex
+                                            + "\",\"_type\":\""
+                                            + (toType != null ? toType : hit
+                                                    .getType())
+                                            + "\",\"_id\":\"" + hit.getId()
+                                            + "\"}}";
+                                    writer.write(header);
+                                    writer.write("\n");
+                                    writer.write(source);
+                                    writer.write("\n");
+                                }
+                            }
+                            writer.flush();
+                        } catch (IOException e) {
+                            ReindexingListener.this.onFailure(e);
                         }
-                        client.prepareSearchScroll(response.getScrollId())
-                                .setScroll(scroll).setListenerThreaded(true)
-                                .execute(ReindexingListener.this);
                     }
-
+                }).execute(new Curl.ResponseListener() {
                     @Override
-                    public void onFailure(final Throwable e) {
-                        ReindexingListener.this.onFailure(e);
+                    public void onResponse(HttpURLConnection con) {
+                        try {
+                            int responseCode = con.getResponseCode();
+                            if (responseCode == 200) {
+                                client.prepareSearchScroll(
+                                        response.getScrollId())
+                                        .setScroll(scroll)
+                                        .setListenerThreaded(true)
+                                        .execute(ReindexingListener.this);
+                            } else {
+                                throw new ReindexingException(
+                                        "The response code from " + url + " is");
+                            }
+                        } catch (Exception e) {
+                            ReindexingListener.this.onFailure(e);
+                        }
                     }
                 });
+            } catch (CurlException e) {
+                onFailure(e);
             }
         }
 
