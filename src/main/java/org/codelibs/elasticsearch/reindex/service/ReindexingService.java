@@ -19,6 +19,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.search.ClearScrollResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -31,18 +32,23 @@ import org.elasticsearch.common.xcontent.ToXContent.Params;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.threadpool.ThreadPool;
 
 public class ReindexingService extends
         AbstractLifecycleComponent<ReindexingService> {
 
     private Client client;
 
-    private Map<String, ReindexingListener> reindexingListenerMap = new ConcurrentHashMap<String, ReindexingService.ReindexingListener>();;
+    private Map<String, ReindexingListener> reindexingListenerMap = new ConcurrentHashMap<String, ReindexingService.ReindexingListener>();
+
+    private ThreadPool threadPool;;
 
     @Inject
-    public ReindexingService(final Settings settings, final Client client) {
+    public ReindexingService(final Settings settings, final Client client,
+            final ThreadPool threadPool) {
         super(settings);
         this.client = client;
+        this.threadPool = threadPool;
     }
 
     @Override
@@ -88,7 +94,7 @@ public class ReindexingService extends
     public String execute(final Params params, final BytesReference content,
             final ActionListener<Void> listener) {
         final String url = params.param("url");
-        final String scroll = params.param("scroll");
+        final String scroll = params.param("scroll", "1m");
         final String fromIndex = params.param("index");
         final String fromType = params.param("type");
         final String toIndex = params.param("toindex");
@@ -130,6 +136,8 @@ public class ReindexingService extends
 
         private ActionListener<Void> listener;
 
+        private volatile String scrollId;
+
         ReindexingListener(final String url, final String toIndex,
                 final String toType, final String scroll,
                 final ActionListener<Void> listener) {
@@ -151,26 +159,32 @@ public class ReindexingService extends
                 return;
             }
 
+            scrollId = response.getScrollId();
             if (initialized.compareAndSet(false, true)) {
-                client.prepareSearchScroll(response.getScrollId())
-                        .setScroll(scroll).setListenerThreaded(true)
-                        .execute(this);
+                client.prepareSearchScroll(scrollId).setScroll(scroll)
+                        .setListenerThreaded(true).execute(this);
                 return;
             }
 
             final SearchHits searchHits = response.getHits();
             final SearchHit[] hits = searchHits.getHits();
             if (hits.length == 0) {
-                delete(name);
+                scrollId = null;
+                reindexingListenerMap.remove(name);
                 listener.onResponse(null);
             } else if (url != null) {
-                sendToRemoteCluster(response, hits);
+                threadPool.generic().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendToRemoteCluster(scrollId, hits);
+                    }
+                });
             } else {
-                sendToLocalCluster(response, hits);
+                sendToLocalCluster(scrollId, hits);
             }
         }
 
-        private void sendToLocalCluster(final SearchResponse response,
+        private void sendToLocalCluster(final String scrollId,
                 final SearchHit[] hits) {
             final BulkRequestBuilder bulkRequest = client.prepareBulk();
             for (final SearchHit hit : hits) {
@@ -186,8 +200,8 @@ public class ReindexingService extends
                         throw new ReindexingException(bulkResponse
                                 .buildFailureMessage());
                     }
-                    client.prepareSearchScroll(response.getScrollId())
-                            .setScroll(scroll).setListenerThreaded(true)
+                    client.prepareSearchScroll(scrollId).setScroll(scroll)
+                            .setListenerThreaded(true)
                             .execute(ReindexingListener.this);
                 }
 
@@ -198,7 +212,7 @@ public class ReindexingService extends
             });
         }
 
-        private void sendToRemoteCluster(final SearchResponse response,
+        private void sendToRemoteCluster(final String scrollId,
                 final SearchHit[] hits) {
             try {
                 Curl.post(url + "_bulk").onConnect(new ConnectionBuilder() {
@@ -237,8 +251,7 @@ public class ReindexingService extends
                         try {
                             int responseCode = con.getResponseCode();
                             if (responseCode == 200) {
-                                client.prepareSearchScroll(
-                                        response.getScrollId())
+                                client.prepareSearchScroll(scrollId)
                                         .setScroll(scroll)
                                         .setListenerThreaded(true)
                                         .execute(ReindexingListener.this);
@@ -265,6 +278,25 @@ public class ReindexingService extends
 
         public void interrupt() {
             interrupted.set(true);
+            if (scrollId != null) {
+                client.prepareClearScroll().addScrollId(scrollId)
+                        .execute(new ActionListener<ClearScrollResponse>() {
+
+                            @Override
+                            public void onResponse(ClearScrollResponse response) {
+                                // nothing
+                            }
+
+                            @Override
+                            public void onFailure(Throwable e) {
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug(
+                                            "Failed to stop reindexing for "
+                                                    + toIndex + ".", e);
+                                }
+                            }
+                        });
+            }
         }
 
         public String getName() {
