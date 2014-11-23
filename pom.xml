@@ -129,7 +129,7 @@
 		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>1.4.0.2-SNAPSHOT</version>
+			<version>1.4.0.2</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
