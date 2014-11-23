@@ -11,7 +11,7 @@ If you want to add new analyzers or make changes to exsiting fields, you need to
 | Version   | elasticsearch |
 |:---------:|:-------------:|
 | master    | 1.4.X         |
-| 1.4.0     | 1.4.0.Beta1   |
+| 1.4.1     | 1.4.0         |
 | 1.3.0     | 1.3.0         |
 
 ### Issues/Questions
@@ -21,7 +21,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-reindexing/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.4.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.4.1
 
 ## Usage
 
@@ -41,6 +41,10 @@ A value of "name" is a reindexing name(ex. 8e0c3743-41ea-4268-aa81-d4c38058a407)
 To wait for the reindexing process, use "wait\_for\_completion":
 
     $ curl -XPOST localhost:9200/sample/_reindex/newsample/?wait_for_completion=true
+
+Sending reindexing data to a remote cluster, use "url":
+
+    $ curl -XPOST localhost:9200/sample/_reindex/newsample/?url=http%3A%2F%2Flocalhost%3A9200%2F
 
 ### Check Reindexing process
 
