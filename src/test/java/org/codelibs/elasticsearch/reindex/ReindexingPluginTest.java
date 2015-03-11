@@ -12,6 +12,7 @@ import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.ImmutableSettings.Builder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
 
 public class ReindexingPluginTest extends TestCase {
@@ -43,7 +44,7 @@ public class ReindexingPluginTest extends TestCase {
         runner.clean();
     }
 
-    public void test_runCluster() throws Exception {
+    public void test_reindexing() throws Exception {
 
         final String index = "dataset";
         final String type = "item";
@@ -274,4 +275,283 @@ public class ReindexingPluginTest extends TestCase {
 
         runner.deleteIndex(newIndex);
     }
+
+    public void test_parentChild() throws Exception {
+
+        final String index = "company";
+        final String parentType = "branch";
+        final String childType = "employee";
+
+        // create an index
+        runner.createIndex(index, null);
+        runner.createMapping(index, childType, "{\"_parent\":{\"type\":\""
+                + parentType + "\"}}");
+
+        if (!runner.indexExists(index)) {
+            fail();
+        }
+
+        // create parent 1000 documents
+        for (int i = 1; i <= 100; i++) {
+            final IndexResponse indexResponse1 = runner.insert(index,
+                    parentType, String.valueOf(i), "{\"name\":\"Branch" + i
+                            + "\"}");
+            assertTrue(indexResponse1.isCreated());
+            for (int j = 1; j <= 10; j++) {
+                final IndexResponse indexResponse2 = runner
+                        .client()
+                        .prepareIndex(index, childType, i + "_" + j)
+                        .setSource(
+                                "{\"name\":\"Taro " + i + "_" + j
+                                        + "\", \"age\":\"" + (i % 20 + 20)
+                                        + "\"}").setParent(String.valueOf(i))
+                        .setRefresh(true).execute().actionGet();
+                assertTrue(indexResponse2.isCreated());
+            }
+        }
+        runner.refresh();
+
+        // search 100 parent documents
+        {
+            final SearchResponse searchResponse = runner.search(index,
+                    parentType, null, null, 0, 10);
+            assertEquals(100, searchResponse.getHits().getTotalHits());
+        }
+        // search 1000 child documents
+        {
+            final SearchResponse searchResponse = runner.search(index,
+                    childType, null, null, 0, 10);
+            assertEquals(1000, searchResponse.getHits().getTotalHits());
+        }
+        // search 5 parent documents
+        {
+            final SearchResponse searchResponse = runner
+                    .search(index, parentType, QueryBuilders.hasChildQuery(
+                            childType, QueryBuilders.matchQuery("age", "20")),
+                            null, 0, 10);
+            assertEquals(5, searchResponse.getHits().getTotalHits());
+        }
+
+        Node node = runner.node();
+
+        runner.ensureGreen();
+        test_index_to_newIndex_pc(node, index, parentType, childType);
+
+        runner.ensureGreen();
+        test_index_type_to_newIndex_pc(node, index, parentType, childType);
+
+        runner.ensureGreen();
+        test_index_to_remote_newIndex_pc(node, index, parentType, childType);
+
+        runner.ensureGreen();
+        test_index_type_to_remote_newIndex_pc(node, index, parentType,
+                childType);
+    }
+
+    private void test_index_type_to_remote_newIndex_pc(Node node, String index,
+            String parentType, String childType) throws Exception {
+        String newIndex = "company2";
+        String newParentType = parentType;
+        String newChildType = childType;
+
+        // create an index
+        runner.createIndex(newIndex, null);
+        runner.createMapping(newIndex, newChildType,
+                "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
+
+        // reindex
+        try (CurlResponse curlResponse = Curl
+                .post(node,
+                        "/" + index + "/" + parentType + "," + childType
+                                + "/_reindex/" + newIndex + "/")
+                .param("wait_for_completion", "true")
+                .param("url",
+                        "http://localhost:" + node.settings().get("http.port"))
+                .execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search 100 parent documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newParentType, null, null, 0, 10);
+            assertEquals(100, searchResponse.getHits().getTotalHits());
+        }
+        // search 1000 child documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newChildType, null, null, 0, 10);
+            assertEquals(1000, searchResponse.getHits().getTotalHits());
+        }
+        // search 5 parent documents
+        {
+            final SearchResponse searchResponse = runner
+                    .search(newIndex, newParentType, QueryBuilders
+                            .hasChildQuery(newChildType,
+                                    QueryBuilders.matchQuery("age", "20")),
+                            null, 0, 10);
+            assertEquals(5, searchResponse.getHits().getTotalHits());
+        }
+        runner.deleteIndex(newIndex);
+    }
+
+    private void test_index_to_remote_newIndex_pc(Node node, String index,
+            String parentType, String childType) throws Exception {
+        String newIndex = "company2";
+        String newParentType = parentType;
+        String newChildType = childType;
+
+        // create an index
+        runner.createIndex(newIndex, null);
+        runner.createMapping(newIndex, newChildType,
+                "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
+
+        // reindex
+        try (CurlResponse curlResponse = Curl
+                .post(node, "/" + index + "/_reindex/" + newIndex + "/")
+                .param("wait_for_completion", "true")
+                .param("url",
+                        "http://localhost:" + node.settings().get("http.port"))
+                .execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search 100 parent documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newParentType, null, null, 0, 10);
+            assertEquals(100, searchResponse.getHits().getTotalHits());
+        }
+        // search 1000 child documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newChildType, null, null, 0, 10);
+            assertEquals(1000, searchResponse.getHits().getTotalHits());
+        }
+        // search 5 parent documents
+        {
+            final SearchResponse searchResponse = runner
+                    .search(newIndex, newParentType, QueryBuilders
+                            .hasChildQuery(newChildType,
+                                    QueryBuilders.matchQuery("age", "20")),
+                            null, 0, 10);
+            assertEquals(5, searchResponse.getHits().getTotalHits());
+        }
+        runner.deleteIndex(newIndex);
+    }
+
+    private void test_index_type_to_newIndex_pc(Node node, String index,
+            String parentType, String childType) throws Exception {
+        String newIndex = "company2";
+        String newParentType = parentType;
+        String newChildType = childType;
+
+        // create an index
+        runner.createIndex(newIndex, null);
+        runner.createMapping(newIndex, newChildType,
+                "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
+
+        // reindex
+        try (CurlResponse curlResponse = Curl
+                .post(node,
+                        "/" + index + "/" + parentType + "," + childType
+                                + "/_reindex/" + newIndex + "/")
+                .param("wait_for_completion", "true").execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search 100 parent documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newParentType, null, null, 0, 10);
+            assertEquals(100, searchResponse.getHits().getTotalHits());
+        }
+        // search 1000 child documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newChildType, null, null, 0, 10);
+            assertEquals(1000, searchResponse.getHits().getTotalHits());
+        }
+        // search 5 parent documents
+        {
+            final SearchResponse searchResponse = runner
+                    .search(newIndex, newParentType, QueryBuilders
+                            .hasChildQuery(newChildType,
+                                    QueryBuilders.matchQuery("age", "20")),
+                            null, 0, 10);
+            assertEquals(5, searchResponse.getHits().getTotalHits());
+        }
+        runner.deleteIndex(newIndex);
+    }
+
+    private void test_index_to_newIndex_pc(Node node, String index,
+            String parentType, String childType) throws Exception {
+        String newIndex = "company2";
+        String newParentType = parentType;
+        String newChildType = childType;
+
+        // create an index
+        runner.createIndex(newIndex, null);
+        runner.createMapping(newIndex, newChildType,
+                "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
+
+        // reindex
+        try (CurlResponse curlResponse = Curl
+                .post(node, "/" + index + "/_reindex/" + newIndex + "/")
+                .param("wait_for_completion", "true").execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search 100 parent documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newParentType, null, null, 0, 10);
+            assertEquals(100, searchResponse.getHits().getTotalHits());
+        }
+        // search 1000 child documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newChildType, null, null, 0, 10);
+            assertEquals(1000, searchResponse.getHits().getTotalHits());
+        }
+        // search 5 parent documents
+        {
+            final SearchResponse searchResponse = runner
+                    .search(newIndex, newParentType, QueryBuilders
+                            .hasChildQuery(newChildType,
+                                    QueryBuilders.matchQuery("age", "20")),
+                            null, 0, 10);
+            assertEquals(5, searchResponse.getHits().getTotalHits());
+        }
+        runner.deleteIndex(newIndex);
+    }
+
 }

@@ -19,6 +19,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.ClearScrollResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -31,6 +32,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContent.Params;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.threadpool.ThreadPool;
 
@@ -99,11 +101,14 @@ public class ReindexingService extends
         final String fromType = params.param("type");
         final String toIndex = params.param("toindex");
         final String toType = params.param("totype");
+        final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {
+                "_source", "_parent" }
+                : new String[] { "_source" };
         final ReindexingListener reindexingListener = new ReindexingListener(
                 url, toIndex, toType, scroll, listener);
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
                 .setSearchType(SearchType.SCAN).setScroll(scroll)
-                .setListenerThreaded(true);
+                .addFields(fields).setListenerThreaded(true);
         if (StringUtils.isNotBlank(fromType)) {
             builder.setTypes(fromType.split(","));
         }
@@ -188,9 +193,18 @@ public class ReindexingService extends
                 final SearchHit[] hits) {
             final BulkRequestBuilder bulkRequest = client.prepareBulk();
             for (final SearchHit hit : hits) {
-                bulkRequest.add(client.prepareIndex(toIndex,
+                IndexRequestBuilder builder = client.prepareIndex(toIndex,
                         toType != null ? toType : hit.getType(), hit.getId())
-                        .setSource(hit.getSource()));
+                        .setSource(hit.getSource());
+                Map<String, SearchHitField> fields = hit.getFields();
+                if (fields != null && fields.containsKey("_parent")) {
+                    SearchHitField parentField = fields.get("_parent");
+                    if (parentField != null) {
+                        String parentId = parentField.getValue();
+                        builder.setParent(parentId);
+                    }
+                }
+                bulkRequest.add(builder);
             }
 
             bulkRequest.execute(new ActionListener<BulkResponse>() {
@@ -224,17 +238,38 @@ public class ReindexingService extends
                                 new OutputStreamWriter(connection
                                         .getOutputStream(), curlRequest
                                         .encoding()))) {
+                            StringBuilder buf = new StringBuilder(200);
                             for (final SearchHit hit : hits) {
                                 String source = hit.getSourceAsString();
                                 if (source != null) {
-                                    String header = "{\"index\":{\"_index\":\""
-                                            + toIndex
-                                            + "\",\"_type\":\""
-                                            + (toType != null ? toType : hit
-                                                    .getType())
-                                            + "\",\"_id\":\"" + hit.getId()
-                                            + "\"}}";
-                                    writer.write(header);
+                                    buf.setLength(0);
+                                    buf.append("{\"index\":{\"_index\":\"");
+                                    buf.append(toIndex);
+                                    buf.append("\",\"_type\":\"");
+                                    if (toType == null) {
+                                        buf.append(hit.getType());
+                                    } else {
+                                        buf.append(toType);
+                                    }
+                                    buf.append("\",\"_id\":\"");
+                                    buf.append(hit.getId());
+                                    buf.append("\"");
+                                    Map<String, SearchHitField> fields = hit
+                                            .getFields();
+                                    if (fields != null
+                                            && fields.containsKey("_parent")) {
+                                        SearchHitField parentField = fields
+                                                .get("_parent");
+                                        if (parentField != null) {
+                                            String parentId = parentField
+                                                    .getValue();
+                                            buf.append(",\"_parent\":\"");
+                                            buf.append(parentId);
+                                            buf.append("\"");
+                                        }
+                                    }
+                                    buf.append("}}");
+                                    writer.write(buf.toString());
                                     writer.write("\n");
                                     writer.write(source);
                                     writer.write("\n");
