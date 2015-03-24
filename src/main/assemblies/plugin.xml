@@ -13,6 +13,7 @@
 			<excludes>
 				<exclude>org.elasticsearch:elasticsearch</exclude>
 				<exclude>org.codelibs:elasticsearch-cluster-runner</exclude>
+				<exclude>org.codelibs:elasticsearch-util</exclude>
 			</excludes>
 		</dependencySet>
 	</dependencySets>

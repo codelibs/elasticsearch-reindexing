@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.codelibs</groupId>
 	<artifactId>elasticsearch-reindexing</artifactId>
-	<version>1.4.3-SNAPSHOT</version>
+	<version>1.5.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<description>elasticsearch elasticsearch-reindexing plugin</description>
 	<inceptionYear>2014</inceptionYear>
@@ -26,7 +26,7 @@
 		<version>9</version>
 	</parent>
 	<properties>
-		<elasticsearch.version>1.4.4</elasticsearch.version>
+		<elasticsearch.version>1.5.0</elasticsearch.version>
 	</properties>
 	<build>
 		<plugins>
@@ -72,6 +72,7 @@
 							<artifactSet>
 								<includes>
 									<include>org.codelibs:elasticsearch-cluster-runner</include>
+									<include>org.codelibs:elasticsearch-util</include>
 								</includes>
 							</artifactSet>
 							<filters>
@@ -81,11 +82,17 @@
 										<include>org/codelibs/elasticsearch/runner/net/**</include>
 									</includes>
 								</filter>
+								<filter>
+									<artifact>org.codelibs:elasticsearch-util</artifact>
+									<includes>
+										<include>org/codelibs/elasticsearch/util/**</include>
+									</includes>
+								</filter>
 							</filters>
 							<relocations>
 								<relocation>
-									<pattern>org.codelibs.elasticsearch.runner.net</pattern>
-									<shadedPattern>org.codelibs.elasticsearch.reindex.net</shadedPattern>
+									<pattern>org.codelibs.elasticsearch.util</pattern>
+									<shadedPattern>org.codelibs.elasticsearch.reindex.common</shadedPattern>
 								</relocation>
 							</relocations>
 						</configuration>
@@ -122,13 +129,13 @@
 		</dependency>
 		<dependency>
 			<groupId>org.codelibs</groupId>
-			<artifactId>elasticsearch-util</artifactId>
-			<version>0.3.0</version>
+			<artifactId>elasticsearch-cluster-runner</artifactId>
+			<version>1.5.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.codelibs</groupId>
-			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>1.4.2.0</version>
+			<artifactId>elasticsearch-util</artifactId>
+			<version>1.5.0</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
