@@ -10,8 +10,8 @@ If you want to add new analyzers or make changes to exsiting fields, you need to
 
 | Version   | elasticsearch |
 |:---------:|:-------------:|
-| master    | 1.4.X         |
-| 1.4.1     | 1.4.0         |
+| master    | 1.5.X         |
+| 1.4.2     | 1.4.4         |
 | 1.3.0     | 1.3.0         |
 
 ### Issues/Questions
@@ -21,7 +21,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-reindexing/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.4.1
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.4.2
 
 ## Usage
 
