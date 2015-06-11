@@ -3,6 +3,7 @@ package org.codelibs.elasticsearch.reindex;
 import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newConfigs;
 
 import java.util.Map;
+import java.util.UUID;
 
 import junit.framework.TestCase;
 
@@ -30,7 +31,8 @@ public class ReindexingPluginTest extends TestCase {
                 settingsBuilder.put("http.cors.enabled", true);
                 settingsBuilder.put("index.number_of_replicas", 0);
             }
-        }).build(newConfigs().ramIndexStore().numOfNode(1));
+        }).build(newConfigs().ramIndexStore().numOfNode(1)
+                .clusterName(UUID.randomUUID().toString()));
 
         // wait for yellow status
         runner.ensureYellow();
