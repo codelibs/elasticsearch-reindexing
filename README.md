@@ -8,11 +8,12 @@ If you want to add new analyzers or make changes to exsiting fields, you need to
 
 ## Version
 
-| Version   | elasticsearch |
-|:---------:|:-------------:|
-| master    | 1.5.X         |
-| 1.4.2     | 1.4.4         |
-| 1.3.0     | 1.3.0         |
+| Version   | Tested On Elasticsearch |
+|:---------:|:-----------------------:|
+| master    | 1.7.X                   |
+| 1.7.0     | 1.7.1                   |
+| 1.4.2     | 1.4.4                   |
+| 1.3.0     | 1.3.0                   |
 
 ### Issues/Questions
 
@@ -21,7 +22,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-reindexing/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.4.2
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-reindexing/1.7.0
 
 ## Usage
 
@@ -45,6 +46,10 @@ To wait for the reindexing process, use "wait\_for\_completion":
 Sending reindexing data to a remote cluster, use "url":
 
     $ curl -XPOST localhost:9200/sample/_reindex/newsample/?url=http%3A%2F%2Flocalhost%3A9200%2F
+
+To specify your query,
+
+    $ curl -XPOST localhost:9200/sample/_reindex/newsample -d '{"query":{"match_all":{}}}'
 
 ### Check Reindexing process
 
