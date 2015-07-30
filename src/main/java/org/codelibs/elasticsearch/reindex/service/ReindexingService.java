@@ -112,11 +112,11 @@ public class ReindexingService extends
         if (StringUtils.isNotBlank(fromType)) {
             builder.setTypes(fromType.split(","));
         }
-        if (content == null) {
+        if (content == null || content.length() == 0) {
             builder.setQuery(QueryBuilders.matchAllQuery()).setSize(
                     Integer.parseInt(params.param("size", "1000")));
         } else {
-            builder.setSource(content);
+            builder.setExtraSource(content);
         }
         builder.execute(reindexingListener);
         reindexingListenerMap.put(reindexingListener.getName(),
