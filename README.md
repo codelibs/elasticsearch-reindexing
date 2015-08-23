@@ -3,8 +3,8 @@ Elasticsearch Reindexing
 
 ## Overview
 
-Elasticsearch Reindexing Plugin provides a feature to create a new index from an exsiting index.
-If you want to add new analyzers or make changes to exsiting fields, you need to re-create your index.
+Elasticsearch Reindexing Plugin provides a feature to create a new index from an existing index.
+If you want to add new analyzers or make changes to existing fields, you need to re-create your index.
 
 ## Version
 
