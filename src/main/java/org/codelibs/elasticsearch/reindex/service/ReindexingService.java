@@ -14,7 +14,6 @@ import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlException;
 import org.codelibs.elasticsearch.runner.net.CurlRequest;
 import org.codelibs.elasticsearch.runner.net.CurlRequest.ConnectionBuilder;
-import org.codelibs.elasticsearch.util.lang.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -108,8 +107,8 @@ public class ReindexingService extends
                 url, toIndex, toType, scroll, listener);
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
                 .setSearchType(SearchType.SCAN).setScroll(scroll)
-                .addFields(fields).setListenerThreaded(true);
-        if (StringUtils.isNotBlank(fromType)) {
+                .addFields(fields);
+        if (fromType != null && fromType.trim().length() > 0) {
             builder.setTypes(fromType.split(","));
         }
         if (content == null || content.length() == 0) {
@@ -167,7 +166,7 @@ public class ReindexingService extends
             scrollId = response.getScrollId();
             if (initialized.compareAndSet(false, true)) {
                 client.prepareSearchScroll(scrollId).setScroll(scroll)
-                        .setListenerThreaded(true).execute(this);
+                        .execute(this);
                 return;
             }
 
@@ -215,7 +214,6 @@ public class ReindexingService extends
                                 .buildFailureMessage());
                     }
                     client.prepareSearchScroll(scrollId).setScroll(scroll)
-                            .setListenerThreaded(true)
                             .execute(ReindexingListener.this);
                 }
 
@@ -288,7 +286,6 @@ public class ReindexingService extends
                             if (responseCode == 200) {
                                 client.prepareSearchScroll(scrollId)
                                         .setScroll(scroll)
-                                        .setListenerThreaded(true)
                                         .execute(ReindexingListener.this);
                             } else {
                                 throw new ReindexingException(

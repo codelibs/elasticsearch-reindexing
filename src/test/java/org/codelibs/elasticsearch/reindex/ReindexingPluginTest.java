@@ -3,25 +3,27 @@ package org.codelibs.elasticsearch.reindex;
 import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newConfigs;
 
 import java.util.Map;
-import java.util.UUID;
-
-import junit.framework.TestCase;
 
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
 import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.common.settings.ImmutableSettings.Builder;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
+
+import junit.framework.TestCase;
 
 public class ReindexingPluginTest extends TestCase {
 
     private ElasticsearchClusterRunner runner;
 
+    private String clusterName;
+
     @Override
     protected void setUp() throws Exception {
+        clusterName = "es-reindexing-" + System.currentTimeMillis();
         // create runner instance
         runner = new ElasticsearchClusterRunner();
         // create ES nodes
@@ -29,10 +31,17 @@ public class ReindexingPluginTest extends TestCase {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
+                settingsBuilder.put("http.cors.allow-origin", "*");
+                settingsBuilder.put("index.number_of_shards", 3);
                 settingsBuilder.put("index.number_of_replicas", 0);
+                settingsBuilder.putArray("discovery.zen.ping.unicast.hosts",
+                        "localhost:9301-9310");
+                settingsBuilder.put("plugin.types",
+                        "org.codelibs.elasticsearch.reindex.ReindexingPlugin");
+                settingsBuilder
+                        .put("index.unassigned.node_left.delayed_timeout", "0");
             }
-        }).build(newConfigs().ramIndexStore().numOfNode(1)
-                .clusterName(UUID.randomUUID().toString()));
+        }).build(newConfigs().numOfNode(1).clusterName(clusterName));
 
         // wait for yellow status
         runner.ensureYellow();
