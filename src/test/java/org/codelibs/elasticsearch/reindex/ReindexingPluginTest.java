@@ -88,6 +88,9 @@ public class ReindexingPluginTest extends TestCase {
         Node node = runner.node();
 
         runner.ensureGreen();
+        test_index_to_remote_newIndex_withSource(node, index, type);
+
+        runner.ensureGreen();
         test_index_to_newIndex_withSource(node, index, type);
 
         runner.ensureGreen();
@@ -315,6 +318,38 @@ public class ReindexingPluginTest extends TestCase {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newType, null, null, 0, 10);
             assertEquals(1000, searchResponse.getHits().getTotalHits());
+        }
+
+        runner.deleteIndex(newIndex);
+    }
+
+    private void test_index_to_remote_newIndex_withSource(Node node, String index, String type)
+            throws Exception {
+        String newIndex = "dataset2";
+        String newType = type;
+
+        try (CurlResponse curlResponse = Curl
+                .post(node, "/" + index + "/_reindex/" + newIndex)
+                .param("wait_for_completion", "true")
+                .param("url",
+                        "http://localhost:" + node.settings().get("http.port"))
+                .body("{\"query\":{\"term\":{\"msg\":{\"value\":\"100\"}}}}")
+                .execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search 1 documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newType, null, null, 0, 10);
+            assertEquals(1, searchResponse.getHits().getTotalHits());
         }
 
         runner.deleteIndex(newIndex);
