@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.codelibs</groupId>
 	<artifactId>elasticsearch-reindexing</artifactId>
-	<version>2.1.1</version>
+	<version>2.1.2-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<description>This plugin copies a new index by reindexing.</description>
 	<inceptionYear>2014</inceptionYear>
