@@ -22,7 +22,6 @@ import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.ClearScrollResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
@@ -106,8 +105,7 @@ public class ReindexingService extends
         final ReindexingListener reindexingListener = new ReindexingListener(
                 url, toIndex, toType, scroll, listener);
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
-                .setSearchType(SearchType.SCAN).setScroll(scroll)
-                .addFields(fields);
+                .setScroll(scroll).addFields(fields);
         if (fromType != null && fromType.trim().length() > 0) {
             builder.setTypes(fromType.split(","));
         }
@@ -124,7 +122,6 @@ public class ReindexingService extends
     }
 
     private class ReindexingListener implements ActionListener<SearchResponse> {
-        private AtomicBoolean initialized = new AtomicBoolean(false);
 
         private AtomicBoolean interrupted = new AtomicBoolean(false);
 
@@ -163,28 +160,24 @@ public class ReindexingService extends
                 return;
             }
 
-            scrollId = response.getScrollId();
-            if (initialized.compareAndSet(false, true)) {
-                client.prepareSearchScroll(scrollId).setScroll(scroll)
-                        .execute(this);
-                return;
-            }
-
             final SearchHits searchHits = response.getHits();
             final SearchHit[] hits = searchHits.getHits();
             if (hits.length == 0) {
                 scrollId = null;
                 reindexingListenerMap.remove(name);
                 listener.onResponse(null);
-            } else if (url != null) {
-                threadPool.generic().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        sendToRemoteCluster(scrollId, hits);
-                    }
-                });
             } else {
-                sendToLocalCluster(scrollId, hits);
+                scrollId = response.getScrollId();
+                if (url != null) {
+                    threadPool.generic().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            sendToRemoteCluster(scrollId, hits);
+                        }
+                    });
+                } else {
+                    sendToLocalCluster(scrollId, hits);
+                }
             }
         }
 
