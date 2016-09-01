@@ -10,7 +10,8 @@ If you want to add new analyzers or make changes to existing fields, you need to
 
 | Version   | Tested On Elasticsearch |
 |:---------:|:-----------------------:|
-| master    | 2.1.X                   |
+| master    | 2.4.X                   |
+| 2.3.0     | 2.3.5                   |
 | 2.1.1     | 2.1.1                   |
 | 2.1.0     | 2.1.0                   |
 | 1.7.0     | 1.7.1                   |
@@ -24,7 +25,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-reindexing/issu
 
 ## Installation
 
-    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-reindexing/2.1.1
+    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-reindexing/2.3.0
 
 ## Usage
 
