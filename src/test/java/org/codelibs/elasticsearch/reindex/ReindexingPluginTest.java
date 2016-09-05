@@ -28,6 +28,10 @@ public class ReindexingPluginTest extends TestCase {
         // create runner instance
         runner = new ElasticsearchClusterRunner();
         // create ES nodes
+        /**
+         * pass an ElasticsearchClusterRunner.Builder object into runner,
+         * Builder is an inner interface, implementing while using
+         */
         runner.onBuild(new ElasticsearchClusterRunner.Builder() {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
@@ -44,7 +48,7 @@ public class ReindexingPluginTest extends TestCase {
             }
         }).build(newConfigs().numOfNode(1).clusterName(clusterName));
 
-        // wait for yellow status
+        // wait for yellow status: all primary shards available, not all replica shards
         runner.ensureYellow();
     }
 
@@ -114,7 +118,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_type_to_newIndex_newType(Node node, String index,
-            String type) throws Exception {
+                                                     String type) throws Exception {
         String newIndex = "dataset2";
         String newType = "item2";
 
@@ -144,7 +148,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_type_to_newIndex(Node node, String index,
-            String type) throws Exception {
+                                             String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
 
@@ -230,7 +234,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_type_to_remote_newIndex_newType(Node node,
-            String index, String type) throws Exception {
+                                                            String index, String type) throws Exception {
         String newIndex = "dataset2";
         String newType = "item2";
 
@@ -263,7 +267,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_type_to_remote_newIndex(Node node, String index,
-            String type) throws Exception {
+                                                    String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
 
@@ -294,7 +298,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_to_remote_newIndex(Node node, String index,
-            String type) throws Exception {
+                                               String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
 
@@ -429,7 +433,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_type_to_remote_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                                       String parentType, String childType) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -474,8 +478,8 @@ public class ReindexingPluginTest extends TestCase {
         {
             final SearchResponse searchResponse = runner
                     .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", "20")),
                             null, 0, 10);
             assertEquals(5, searchResponse.getHits().getTotalHits());
         }
@@ -483,7 +487,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_to_remote_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                                  String parentType, String childType) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -526,8 +530,8 @@ public class ReindexingPluginTest extends TestCase {
         {
             final SearchResponse searchResponse = runner
                     .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", "20")),
                             null, 0, 10);
             assertEquals(5, searchResponse.getHits().getTotalHits());
         }
@@ -535,7 +539,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_type_to_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                                String parentType, String childType) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -577,8 +581,8 @@ public class ReindexingPluginTest extends TestCase {
         {
             final SearchResponse searchResponse = runner
                     .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", "20")),
                             null, 0, 10);
             assertEquals(5, searchResponse.getHits().getTotalHits());
         }
@@ -586,7 +590,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_to_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                           String parentType, String childType) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -626,8 +630,8 @@ public class ReindexingPluginTest extends TestCase {
         {
             final SearchResponse searchResponse = runner
                     .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", "20")),
                             null, 0, 10);
             assertEquals(5, searchResponse.getHits().getTotalHits());
         }
