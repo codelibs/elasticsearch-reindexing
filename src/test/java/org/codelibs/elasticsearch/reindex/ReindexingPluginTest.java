@@ -9,6 +9,7 @@ import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
@@ -61,7 +62,7 @@ public class ReindexingPluginTest extends TestCase {
         final String type = "item";
 
         // create an index
-        runner.createIndex(index, null);
+        runner.createIndex(index, (Settings) null);
 
         if (!runner.indexExists(index)) {
             fail();
@@ -362,7 +363,7 @@ public class ReindexingPluginTest extends TestCase {
         final String childType = "employee";
 
         // create an index
-        runner.createIndex(index, null);
+        runner.createIndex(index, (Settings) null);
         runner.createMapping(index, childType, "{\"_parent\":{\"type\":\""
                 + parentType + "\"}}");
 
@@ -434,7 +435,7 @@ public class ReindexingPluginTest extends TestCase {
         String newChildType = childType;
 
         // create an index
-        runner.createIndex(newIndex, null);
+        runner.createIndex(newIndex, (Settings) null);
         runner.createMapping(newIndex, newChildType,
                 "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
 
@@ -488,7 +489,7 @@ public class ReindexingPluginTest extends TestCase {
         String newChildType = childType;
 
         // create an index
-        runner.createIndex(newIndex, null);
+        runner.createIndex(newIndex, (Settings) null);
         runner.createMapping(newIndex, newChildType,
                 "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
 
@@ -540,7 +541,7 @@ public class ReindexingPluginTest extends TestCase {
         String newChildType = childType;
 
         // create an index
-        runner.createIndex(newIndex, null);
+        runner.createIndex(newIndex, (Settings) null);
         runner.createMapping(newIndex, newChildType,
                 "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
 
@@ -591,7 +592,7 @@ public class ReindexingPluginTest extends TestCase {
         String newChildType = childType;
 
         // create an index
-        runner.createIndex(newIndex, null);
+        runner.createIndex(newIndex, (Settings) null);
         runner.createMapping(newIndex, newChildType,
                 "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
 
