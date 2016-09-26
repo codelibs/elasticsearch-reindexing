@@ -23,6 +23,7 @@ public class ReindexingPlugin extends Plugin {
     }
 
     // for Rest API
+    //
     public void onModule(final RestModule module) {
         module.addRestAction(ReindexRestAction.class);
     }
