@@ -3,6 +3,7 @@ package org.codelibs.elasticsearch.reindex;
 import junit.framework.TestCase;
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
 import org.codelibs.elasticsearch.runner.net.Curl;
+import org.codelibs.elasticsearch.runner.net.CurlRequest;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -67,15 +68,14 @@ public class ReindexingPluginTest extends TestCase {
 
         // create an index
         runner.createIndex(index, (Settings) null);
-
         if (!runner.indexExists(index)) {
             fail();
         }
 
         // create 1000 documents
         for (int i = 1; i <= 1000; i++) {
-            final IndexResponse indexResponse1 = runner.insert(index, type,
-                    String.valueOf(i), "{\"msg\":\"test " + i + "\", \"id\":\"" + i + "\"}");
+            final IndexResponse indexResponse1 = runner.insert(index, type, String.valueOf(i),
+                    "{\"msg\":\"test " + i + "\", \"id\":\"" + i + "\"}");
             assertTrue(indexResponse1.isCreated());
         }
         runner.refresh();
@@ -86,6 +86,7 @@ public class ReindexingPluginTest extends TestCase {
 
         assertTrue(runner.indexExists(index));
 
+        // return an available node of the cluster
         Node node = runner.node();
 
         runner.ensureGreen();
@@ -171,30 +172,33 @@ public class ReindexingPluginTest extends TestCase {
         runner.deleteIndex(newIndex);
     }
 
-    private void test_index_to_newIndex(Node node, String index, String type)
-            throws Exception {
+    /**
+     * Reindex all the documents of {@param index}
+     *
+     * @param node
+     * @param index
+     * @param type
+     * @throws Exception
+     */
+    private void test_index_to_newIndex(Node node, String index, String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
 
-        try (CurlResponse curlResponse = Curl
-                .post(node, "/" + index + "/_reindex/" + newIndex)
-                .param("wait_for_completion", "true").execute()) {
-            Map<String, Object> map = curlResponse.getContentAsMap();
-            assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
-            assertNull(map.get("name"));
-        }
+        CurlRequest curlRequest = Curl.post(node, "/" + index + "/_reindex/" + newIndex)
+                .param("wait_for_completion", "true");
+        CurlResponse curlResponse = curlRequest.execute();
+
+        Map<String, Object> map = curlResponse.getContentAsMap();
+        assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
+        assertNull(map.get("name"));
 
         runner.flush();
 
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 1000 documents
-        {
-            final SearchResponse searchResponse = runner.search(newIndex,
-                    newType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
-        }
+        final SearchResponse searchResponse = runner.search(newIndex, newType, null, null, 0, 10);
+        assertEquals(1000, searchResponse.getHits().getTotalHits());
 
         runner.deleteIndex(newIndex);
     }

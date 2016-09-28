@@ -35,7 +35,7 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.threadpool.ThreadPool;
 
 /**
- * 服务Service:
+ * Elasticsearch服务有一个完整的生命周期,并可以加入Listener
  */
 public class ReindexingService extends AbstractLifecycleComponent<ReindexingService> {
 
