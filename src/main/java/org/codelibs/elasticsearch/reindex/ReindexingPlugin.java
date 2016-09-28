@@ -11,6 +11,9 @@ import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestModule;
 
+/**
+ * 开发插件方法:继承并实现{@link Plugin}类
+ */
 public class ReindexingPlugin extends Plugin {
     @Override
     public String name() {
@@ -22,8 +25,12 @@ public class ReindexingPlugin extends Plugin {
         return "This plugin copies a new index by reindexing.";
     }
 
-    // for Rest API
-    //
+    /**
+     * ES集群启动时,会使用Guice的Injector来创建各个模块(module)
+     *
+     * @param module Elasticsearch中的module实际上就是Guice中的module,
+     *               即用来定义绑定规则(接口到实现),
+     */
     public void onModule(final RestModule module) {
         module.addRestAction(ReindexRestAction.class);
     }

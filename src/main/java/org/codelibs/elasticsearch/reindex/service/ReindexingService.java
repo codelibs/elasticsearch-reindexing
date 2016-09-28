@@ -34,14 +34,16 @@ import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.threadpool.ThreadPool;
 
-public class ReindexingService extends
-        AbstractLifecycleComponent<ReindexingService> {
+/**
+ * 服务Service:
+ */
+public class ReindexingService extends AbstractLifecycleComponent<ReindexingService> {
 
     private Client client;
 
     private Map<String, ReindexingListener> reindexingListenerMap = new ConcurrentHashMap<String, ReindexingService.ReindexingListener>();
 
-    private ThreadPool threadPool;;
+    private ThreadPool threadPool;
 
     @Inject
     public ReindexingService(final Settings settings, final Client client,
@@ -91,8 +93,16 @@ public class ReindexingService extends
         }
     }
 
-    public String execute(final Params params, final BytesReference content,
-            final ActionListener<Void> listener) {
+    /**
+     * Execute the reindexing
+     *
+     * @param params Rest request
+     * @param content Content of rest request in {}
+     * @param listener is to receive the response back
+     * @return
+     */
+    public String execute(final Params params, final BytesReference content, final ActionListener<Void> listener) {
+
         final String url = params.param("url");
         final String scroll = params.param("scroll", "1m");
         final String fromIndex = params.param("index");
@@ -102,8 +112,11 @@ public class ReindexingService extends
         final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {
                 "_source", "_parent" }
                 : new String[] { "_source" };
+
         final ReindexingListener reindexingListener = new ReindexingListener(
                 url, toIndex, toType, scroll, listener);
+
+        // Create search request builder
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
                 .setScroll(scroll).addFields(fields);
         if (fromType != null && fromType.trim().length() > 0) {
@@ -115,12 +128,21 @@ public class ReindexingService extends
         } else {
             builder.setExtraSource(content);
         }
+
+        /**
+         * Execute search request builder and store the results in reindexingListener
+         * {@link ActionListener#onResponse(Object)} define action on the response
+         *
+         */
         builder.execute(reindexingListener);
-        reindexingListenerMap.put(reindexingListener.getName(),
-                reindexingListener);
+
+        reindexingListenerMap.put(reindexingListener.getName(), reindexingListener);
         return reindexingListener.getName();
     }
 
+    /**
+     * An implementation of ActionListener to action for reindexing
+     */
     private class ReindexingListener implements ActionListener<SearchResponse> {
 
         private AtomicBoolean interrupted = new AtomicBoolean(false);
@@ -139,20 +161,22 @@ public class ReindexingService extends
 
         private volatile String scrollId;
 
-        ReindexingListener(final String url, final String toIndex,
-                final String toType, final String scroll,
-                final ActionListener<Void> listener) {
+        ReindexingListener(final String url, final String toIndex, final String toType, final String scroll, final ActionListener<Void> listener) {
+            if (toIndex == null) {
+                throw new ReindexingException("toindex is blank.");
+            }
             this.url = url != null && !url.endsWith("/") ? url + "/" : url;
             this.toIndex = toIndex;
             this.toType = toType;
             this.scroll = scroll;
             this.listener = listener;
-            if (toIndex == null) {
-                throw new ReindexingException("toindex is blank.");
-            }
-            name = UUID.randomUUID().toString();
+            this.name = UUID.randomUUID().toString();
         }
 
+        /**
+         * Action on the response
+         * @param response
+         */
         @Override
         public void onResponse(final SearchResponse response) {
             if (interrupted.get()) {
@@ -160,6 +184,7 @@ public class ReindexingService extends
                 return;
             }
 
+            // Get hit result
             final SearchHits searchHits = response.getHits();
             final SearchHit[] hits = searchHits.getHits();
             if (hits.length == 0) {
@@ -217,8 +242,7 @@ public class ReindexingService extends
             });
         }
 
-        private void sendToRemoteCluster(final String scrollId,
-                final SearchHit[] hits) {
+        private void sendToRemoteCluster(final String scrollId, final SearchHit[] hits) {
             try {
                 Curl.post(url + "_bulk").onConnect(new ConnectionBuilder() {
                     @Override
