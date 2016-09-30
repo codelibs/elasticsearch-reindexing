@@ -27,6 +27,7 @@ public class ReindexingPlugin extends Plugin {
 
     /**
      * ES集群启动时,会使用Guice的Injector来创建各个模块(module)
+     * 模块中绑定了许多服务
      *
      * @param module Elasticsearch中的module实际上就是Guice中的module,
      *               即用来定义绑定规则(接口到实现),

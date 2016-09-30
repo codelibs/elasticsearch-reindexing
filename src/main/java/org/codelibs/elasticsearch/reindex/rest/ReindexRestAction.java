@@ -21,6 +21,7 @@ import org.elasticsearch.rest.RestRequest;
 
 public class ReindexRestAction extends BaseRestHandler {
 
+    // Handler中内置了ReindexingService服务,采用Guice注入
     private ReindexingService reindexingService;
 
     @Inject
@@ -48,6 +49,7 @@ public class ReindexRestAction extends BaseRestHandler {
                 "/_reindex/{name}", this);
     }
 
+    // 用ReindexingService来handle request
     @Override
     protected void handleRequest(final RestRequest request,
             final RestChannel channel, final Client client) {
