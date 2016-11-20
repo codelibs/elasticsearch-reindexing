@@ -114,8 +114,8 @@ public class ReindexingPluginTest extends TestCase {
 //        test_index_to_remote_newIndex(node, index, type);
     }
 
-    private void test_index_type_to_newIndex_newType(Node node, String index,
-                                                     String type) throws Exception {
+    private void test_index_type_to_newIndex_newType(Node node, String index, String type)
+            throws Exception {
         String newIndex = "dataset2";
         String newType = "item2";
 
@@ -618,13 +618,13 @@ public class ReindexingPluginTest extends TestCase {
                     newParentType, null, null, 0, 10);
             assertEquals(100, searchResponse.getHits().getTotalHits());
         }
-        // search 1000 child documents
+        // search child documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newChildType, null, null, 0, 10);
             assertEquals(1000, searchResponse.getHits().getTotalHits());
         }
-        // search 5 parent documents
+        // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
                     .search(newIndex, newParentType, QueryBuilders
