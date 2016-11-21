@@ -22,6 +22,10 @@ public class ReindexingPluginTest extends TestCase {
 
     private String clusterName;
 
+    private final int docNumber = 10;
+    private final int parentNumber = 10;
+    private final int childNumber = 5;
+
     @Override
     protected void setUp() throws Exception {
         clusterName = "es-reindexing-" + System.currentTimeMillis();
@@ -68,20 +72,19 @@ public class ReindexingPluginTest extends TestCase {
             fail();
         }
 
-        // create 1000 documents
-        for (int i = 1; i <= 1000; i++) {
+        // create documents
+        for (int i = 1; i <= docNumber; i++) {
             final IndexResponse indexResponse1 = runner.insert(index, type,
-                    String.valueOf(i), "{\"msg\":\"test " + i + "\", \"id\":\""
-                            + i + "\"}");
+                    String.valueOf(i), "{\"msg\":\"test " + i + "\", \"id\":\"" + i + "\"}");
             assertTrue(indexResponse1.isCreated());
         }
         runner.refresh();
 
-        // search 1000 documents
+        // search documents
         {
             final SearchResponse searchResponse = runner.search(index, type,
                     null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
 
         assertTrue(runner.indexExists(index));
@@ -113,8 +116,8 @@ public class ReindexingPluginTest extends TestCase {
         test_index_to_remote_newIndex(node, index, type);
     }
 
-    private void test_index_type_to_newIndex_newType(Node node, String index,
-            String type) throws Exception {
+    private void test_index_type_to_newIndex_newType(Node node, String index, String type)
+            throws Exception {
         String newIndex = "dataset2";
         String newType = "item2";
 
@@ -133,18 +136,18 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 1000 documents
+        // search documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
 
         runner.deleteIndex(newIndex);
     }
 
     private void test_index_type_to_newIndex(Node node, String index,
-            String type) throws Exception {
+                                             String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
 
@@ -161,11 +164,11 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 1000 documents
+        // search documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
 
         runner.deleteIndex(newIndex);
@@ -189,11 +192,11 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 1000 documents
+        // search documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
 
         runner.deleteIndex(newIndex);
@@ -207,7 +210,7 @@ public class ReindexingPluginTest extends TestCase {
         try (CurlResponse curlResponse = Curl
                 .post(node, "/" + index + "/_reindex/" + newIndex)
                 .param("wait_for_completion", "true")
-                .body("{\"query\":{\"term\":{\"msg\":{\"value\":\"100\"}}}}")
+                .body("{\"query\":{\"term\":{\"msg\":{\"value\":\"1\"}}}}")
                 .execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
@@ -230,7 +233,7 @@ public class ReindexingPluginTest extends TestCase {
     }
 
     private void test_index_type_to_remote_newIndex_newType(Node node,
-            String index, String type) throws Exception {
+                                                            String index, String type) throws Exception {
         String newIndex = "dataset2";
         String newType = "item2";
 
@@ -252,18 +255,18 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 1000 documents
+        // search documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
 
         runner.deleteIndex(newIndex);
     }
 
     private void test_index_type_to_remote_newIndex(Node node, String index,
-            String type) throws Exception {
+                                                    String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
 
@@ -283,18 +286,18 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 1000 documents
+        // search documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
 
         runner.deleteIndex(newIndex);
     }
 
     private void test_index_to_remote_newIndex(Node node, String index,
-            String type) throws Exception {
+                                               String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
 
@@ -314,11 +317,11 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 1000 documents
+        // search documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
 
         runner.deleteIndex(newIndex);
@@ -334,7 +337,7 @@ public class ReindexingPluginTest extends TestCase {
                 .param("wait_for_completion", "true")
                 .param("url",
                         "http://localhost:" + node.settings().get("http.port"))
-                .body("{\"query\":{\"term\":{\"msg\":{\"value\":\"100\"}}}}")
+                .body("{\"query\":{\"term\":{\"msg\":{\"value\":\"1\"}}}}")
                 .execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
@@ -362,6 +365,9 @@ public class ReindexingPluginTest extends TestCase {
         final String parentType = "branch";
         final String childType = "employee";
 
+        final int age = (int) (Math.random() % childNumber) + 1;
+        final String ageStr = String.valueOf(age);
+
         // create an index
         runner.createIndex(index, (Settings) null);
         runner.createMapping(index, childType, "{\"_parent\":{\"type\":\""
@@ -371,19 +377,19 @@ public class ReindexingPluginTest extends TestCase {
             fail();
         }
 
-        // create parent 1000 documents
-        for (int i = 1; i <= 100; i++) {
+        // create parent documents
+        for (int i = 1; i <= parentNumber; i++) {
             final IndexResponse indexResponse1 = runner.insert(index,
                     parentType, String.valueOf(i), "{\"name\":\"Branch" + i
                             + "\"}");
             assertTrue(indexResponse1.isCreated());
-            for (int j = 1; j <= 10; j++) {
+            for (int j = 1; j <= childNumber; j++) {
                 final IndexResponse indexResponse2 = runner
                         .client()
                         .prepareIndex(index, childType, i + "_" + j)
                         .setSource(
                                 "{\"name\":\"Taro " + i + "_" + j
-                                        + "\", \"age\":\"" + (i % 20 + 20)
+                                        + "\", \"age\":\"" + (j)
                                         + "\"}").setParent(String.valueOf(i))
                         .setRefresh(true).execute().actionGet();
                 assertTrue(indexResponse2.isCreated());
@@ -391,45 +397,45 @@ public class ReindexingPluginTest extends TestCase {
         }
         runner.refresh();
 
-        // search 100 parent documents
+        // search parent documents
         {
             final SearchResponse searchResponse = runner.search(index,
                     parentType, null, null, 0, 10);
-            assertEquals(100, searchResponse.getHits().getTotalHits());
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 1000 child documents
+        // search child documents
         {
             final SearchResponse searchResponse = runner.search(index,
                     childType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber * childNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 5 parent documents
+        // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
                     .search(index, parentType, QueryBuilders.hasChildQuery(
-                            childType, QueryBuilders.matchQuery("age", "20")),
+                            childType, QueryBuilders.matchQuery("age", ageStr)),
                             null, 0, 10);
-            assertEquals(5, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
 
         Node node = runner.node();
 
         runner.ensureGreen();
-        test_index_to_newIndex_pc(node, index, parentType, childType);
+        test_index_to_newIndex_pc(node, index, parentType, childType, ageStr);
 
         runner.ensureGreen();
-        test_index_type_to_newIndex_pc(node, index, parentType, childType);
+        test_index_type_to_newIndex_pc(node, index, parentType, childType, ageStr);
 
         runner.ensureGreen();
-        test_index_to_remote_newIndex_pc(node, index, parentType, childType);
+        test_index_to_remote_newIndex_pc(node, index, parentType, childType, ageStr);
 
         runner.ensureGreen();
         test_index_type_to_remote_newIndex_pc(node, index, parentType,
-                childType);
+                childType, ageStr);
     }
 
     private void test_index_type_to_remote_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                                       String parentType, String childType, String age) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -441,12 +447,9 @@ public class ReindexingPluginTest extends TestCase {
 
         // reindex
         try (CurlResponse curlResponse = Curl
-                .post(node,
-                        "/" + index + "/" + parentType + "," + childType
-                                + "/_reindex/" + newIndex + "/")
+                .post(node, "/" + index + "/" + parentType + "," + childType + "/_reindex/" + newIndex + "/")
                 .param("wait_for_completion", "true")
-                .param("url",
-                        "http://localhost:" + node.settings().get("http.port"))
+                .param("url", "http://localhost:" + node.settings().get("http.port"))
                 .execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
@@ -458,32 +461,31 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 100 parent documents
+        // search parent documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newParentType, null, null, 0, 10);
-            assertEquals(100, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 1000 child documents
+        // search child documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newChildType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber * childNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 5 parent documents
+        // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
-                    .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                    .search(newIndex, newParentType,
+                            QueryBuilders.hasChildQuery(newChildType, QueryBuilders.matchQuery("age", age)),
                             null, 0, 10);
-            assertEquals(5, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
         runner.deleteIndex(newIndex);
     }
 
     private void test_index_to_remote_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                                  String parentType, String childType, String age) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -497,8 +499,7 @@ public class ReindexingPluginTest extends TestCase {
         try (CurlResponse curlResponse = Curl
                 .post(node, "/" + index + "/_reindex/" + newIndex + "/")
                 .param("wait_for_completion", "true")
-                .param("url",
-                        "http://localhost:" + node.settings().get("http.port"))
+                .param("url", "http://localhost:" + node.settings().get("http.port"))
                 .execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
@@ -510,32 +511,31 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 100 parent documents
+        // search parent documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newParentType, null, null, 0, 10);
-            assertEquals(100, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 1000 child documents
+        // search child documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newChildType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber * childNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 5 parent documents
+        // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
-                    .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                    .search(newIndex, newParentType,
+                            QueryBuilders.hasChildQuery(newChildType, QueryBuilders.matchQuery("age", age)),
                             null, 0, 10);
-            assertEquals(5, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
         runner.deleteIndex(newIndex);
     }
 
     private void test_index_type_to_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                                String parentType, String childType, String age) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -547,9 +547,7 @@ public class ReindexingPluginTest extends TestCase {
 
         // reindex
         try (CurlResponse curlResponse = Curl
-                .post(node,
-                        "/" + index + "/" + parentType + "," + childType
-                                + "/_reindex/" + newIndex + "/")
+                .post(node, "/" + index + "/" + parentType + "," + childType + "/_reindex/" + newIndex + "/")
                 .param("wait_for_completion", "true").execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(((Boolean) map.get("acknowledged")).booleanValue());
@@ -561,32 +559,32 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 100 parent documents
+        // search parent documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newParentType, null, null, 0, 10);
-            assertEquals(100, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
         // search 1000 child documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newChildType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber * childNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 5 parent documents
+        // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
                     .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", age)),
                             null, 0, 10);
-            assertEquals(5, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
         runner.deleteIndex(newIndex);
     }
 
     private void test_index_to_newIndex_pc(Node node, String index,
-            String parentType, String childType) throws Exception {
+                                           String parentType, String childType, String age) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -610,26 +608,26 @@ public class ReindexingPluginTest extends TestCase {
         assertTrue(runner.indexExists(index));
         assertTrue(runner.indexExists(newIndex));
 
-        // search 100 parent documents
+        // search parent documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newParentType, null, null, 0, 10);
-            assertEquals(100, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 1000 child documents
+        // search child documents
         {
             final SearchResponse searchResponse = runner.search(newIndex,
                     newChildType, null, null, 0, 10);
-            assertEquals(1000, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber * childNumber, searchResponse.getHits().getTotalHits());
         }
-        // search 5 parent documents
+        // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
                     .search(newIndex, newParentType, QueryBuilders
-                            .hasChildQuery(newChildType,
-                                    QueryBuilders.matchQuery("age", "20")),
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", age)),
                             null, 0, 10);
-            assertEquals(5, searchResponse.getHits().getTotalHits());
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
         runner.deleteIndex(newIndex);
     }
