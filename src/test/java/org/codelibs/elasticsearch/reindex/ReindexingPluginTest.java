@@ -141,62 +141,6 @@ public class ReindexingPluginTest extends TestCase {
         runner.deleteIndex(newIndex1);
     }
 
-    private void test_index_type_to_newIndex_newType(Node node, String index, String type) throws Exception {
-        String newIndex = "dataset2";
-        String newType = "item2";
-
-        try (CurlResponse curlResponse = Curl
-                .post(node,
-                        "/" + index + "/" + type + "/_reindex/" + newIndex
-                                + "/" + newType)
-                .param("wait_for_completion", "true").execute()) {
-            Map<String, Object> map = curlResponse.getContentAsMap();
-            assertTrue(map.containsKey("acknowledged"));
-            assertNull(map.get("name"));
-        }
-
-        runner.flush();
-
-        assertTrue(runner.indexExists(index));
-        assertTrue(runner.indexExists(newIndex));
-
-        // search documents
-        {
-            final SearchResponse searchResponse = runner.search(newIndex,
-                    newType, null, null, 0, 10);
-            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
-        }
-
-        runner.deleteIndex(newIndex);
-    }
-
-    private void test_index_type_to_newIndex(Node node, String index, String type) throws Exception {
-        String newIndex = "dataset2";
-        String newType = type;
-
-        try (CurlResponse curlResponse = Curl
-                .post(node, "/" + index + "/" + type + "/_reindex/" + newIndex)
-                .param("wait_for_completion", "true").execute()) {
-            Map<String, Object> map = curlResponse.getContentAsMap();
-            assertTrue(map.containsKey("acknowledged"));
-            assertNull(map.get("name"));
-        }
-
-        runner.flush();
-
-        assertTrue(runner.indexExists(index));
-        assertTrue(runner.indexExists(newIndex));
-
-        // search documents
-        {
-            final SearchResponse searchResponse = runner.search(newIndex,
-                    newType, null, null, 0, 10);
-            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
-        }
-
-        runner.deleteIndex(newIndex);
-    }
-
     private void test_index_to_newIndex(Node node, String index, String type) throws Exception {
         String newIndex = "dataset2";
         String newType = type;
@@ -254,18 +198,13 @@ public class ReindexingPluginTest extends TestCase {
         runner.deleteIndex(newIndex);
     }
 
-    private void test_index_type_to_remote_newIndex_newType(Node node, String index, String type) throws Exception {
+    private void test_index_type_to_newIndex(Node node, String index, String type) throws Exception {
         String newIndex = "dataset2";
-        String newType = "item2";
+        String newType = type;
 
         try (CurlResponse curlResponse = Curl
-                .post(node,
-                        "/" + index + "/" + type + "/_reindex/" + newIndex
-                                + "/" + newType)
-                .param("wait_for_completion", "true")
-                .param("url",
-                        "http://localhost:" + node.settings().get("http.port"))
-                .execute()) {
+                .post(node, "/" + index + "/" + type + "/_reindex/" + newIndex)
+                .param("wait_for_completion", "true").execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(map.containsKey("acknowledged"));
             assertNull(map.get("name"));
@@ -286,16 +225,15 @@ public class ReindexingPluginTest extends TestCase {
         runner.deleteIndex(newIndex);
     }
 
-    private void test_index_type_to_remote_newIndex(Node node, String index, String type) throws Exception {
+    private void test_index_type_to_newIndex_newType(Node node, String index, String type) throws Exception {
         String newIndex = "dataset2";
-        String newType = type;
+        String newType = "item2";
 
         try (CurlResponse curlResponse = Curl
-                .post(node, "/" + index + "/" + type + "/_reindex/" + newIndex)
-                .param("wait_for_completion", "true")
-                .param("url",
-                        "http://localhost:" + node.settings().get("http.port"))
-                .execute()) {
+                .post(node,
+                        "/" + index + "/" + type + "/_reindex/" + newIndex
+                                + "/" + newType)
+                .param("wait_for_completion", "true").execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(map.containsKey("acknowledged"));
             assertNull(map.get("name"));
@@ -377,6 +315,68 @@ public class ReindexingPluginTest extends TestCase {
         runner.deleteIndex(newIndex);
     }
 
+    private void test_index_type_to_remote_newIndex(Node node, String index, String type) throws Exception {
+        String newIndex = "dataset2";
+        String newType = type;
+
+        try (CurlResponse curlResponse = Curl
+                .post(node, "/" + index + "/" + type + "/_reindex/" + newIndex)
+                .param("wait_for_completion", "true")
+                .param("url",
+                        "http://localhost:" + node.settings().get("http.port"))
+                .execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(map.containsKey("acknowledged"));
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newType, null, null, 0, 10);
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
+        }
+
+        runner.deleteIndex(newIndex);
+    }
+
+    private void test_index_type_to_remote_newIndex_newType(Node node, String index, String type) throws Exception {
+        String newIndex = "dataset2";
+        String newType = "item2";
+
+        try (CurlResponse curlResponse = Curl
+                .post(node,
+                        "/" + index + "/" + type + "/_reindex/" + newIndex
+                                + "/" + newType)
+                .param("wait_for_completion", "true")
+                .param("url",
+                        "http://localhost:" + node.settings().get("http.port"))
+                .execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(map.containsKey("acknowledged"));
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newType, null, null, 0, 10);
+            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
+        }
+
+        runner.deleteIndex(newIndex);
+    }
+
     public void test_parentChild() throws Exception {
 
         final String index = "company";
@@ -452,7 +452,7 @@ public class ReindexingPluginTest extends TestCase {
                 childType, ageStr);
     }
 
-    private void test_index_type_to_remote_newIndex_pc(Node node, String index, String parentType, String childType, String age) throws Exception {
+    private void test_index_to_newIndex_pc(Node node, String index, String parentType, String childType, String age) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -464,10 +464,8 @@ public class ReindexingPluginTest extends TestCase {
 
         // reindex
         try (CurlResponse curlResponse = Curl
-                .post(node, "/" + index + "/" + parentType + "," + childType + "/_reindex/" + newIndex + "/")
-                .param("wait_for_completion", "true")
-                .param("url", "http://localhost:" + node.settings().get("http.port"))
-                .execute()) {
+                .post(node, "/" + index + "/_reindex/" + newIndex + "/")
+                .param("wait_for_completion", "true").execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(map.containsKey("acknowledged"));
             assertNull(map.get("name"));
@@ -493,8 +491,57 @@ public class ReindexingPluginTest extends TestCase {
         // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
-                    .search(newIndex, newParentType,
-                            QueryBuilders.hasChildQuery(newChildType, QueryBuilders.matchQuery("age", age)),
+                    .search(newIndex, newParentType, QueryBuilders
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", age)),
+                            null, 0, 10);
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
+        }
+        runner.deleteIndex(newIndex);
+    }
+
+    private void test_index_type_to_newIndex_pc(Node node, String index, String parentType, String childType, String age) throws Exception {
+        String newIndex = "company2";
+        String newParentType = parentType;
+        String newChildType = childType;
+
+        // create an index
+        runner.createIndex(newIndex, (Settings) null);
+        runner.createMapping(newIndex, newChildType,
+                "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
+
+        // reindex
+        try (CurlResponse curlResponse = Curl
+                .post(node, "/" + index + "/" + parentType + "," + childType + "/_reindex/" + newIndex + "/")
+                .param("wait_for_completion", "true").execute()) {
+            Map<String, Object> map = curlResponse.getContentAsMap();
+            assertTrue(map.containsKey("acknowledged"));
+            assertNull(map.get("name"));
+        }
+
+        runner.flush();
+
+        assertTrue(runner.indexExists(index));
+        assertTrue(runner.indexExists(newIndex));
+
+        // search parent documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newParentType, null, null, 0, 10);
+            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
+        }
+        // search 1000 child documents
+        {
+            final SearchResponse searchResponse = runner.search(newIndex,
+                    newChildType, null, null, 0, 10);
+            assertEquals(parentNumber * childNumber, searchResponse.getHits().getTotalHits());
+        }
+        // search a certain parent documents
+        {
+            final SearchResponse searchResponse = runner
+                    .search(newIndex, newParentType, QueryBuilders
+                                    .hasChildQuery(newChildType,
+                                            QueryBuilders.matchQuery("age", age)),
                             null, 0, 10);
             assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
@@ -550,7 +597,7 @@ public class ReindexingPluginTest extends TestCase {
         runner.deleteIndex(newIndex);
     }
 
-    private void test_index_type_to_newIndex_pc(Node node, String index, String parentType, String childType, String age) throws Exception {
+    private void test_index_type_to_remote_newIndex_pc(Node node, String index, String parentType, String childType, String age) throws Exception {
         String newIndex = "company2";
         String newParentType = parentType;
         String newChildType = childType;
@@ -563,55 +610,9 @@ public class ReindexingPluginTest extends TestCase {
         // reindex
         try (CurlResponse curlResponse = Curl
                 .post(node, "/" + index + "/" + parentType + "," + childType + "/_reindex/" + newIndex + "/")
-                .param("wait_for_completion", "true").execute()) {
-            Map<String, Object> map = curlResponse.getContentAsMap();
-            assertTrue(map.containsKey("acknowledged"));
-            assertNull(map.get("name"));
-        }
-
-        runner.flush();
-
-        assertTrue(runner.indexExists(index));
-        assertTrue(runner.indexExists(newIndex));
-
-        // search parent documents
-        {
-            final SearchResponse searchResponse = runner.search(newIndex,
-                    newParentType, null, null, 0, 10);
-            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
-        }
-        // search 1000 child documents
-        {
-            final SearchResponse searchResponse = runner.search(newIndex,
-                    newChildType, null, null, 0, 10);
-            assertEquals(parentNumber * childNumber, searchResponse.getHits().getTotalHits());
-        }
-        // search a certain parent documents
-        {
-            final SearchResponse searchResponse = runner
-                    .search(newIndex, newParentType, QueryBuilders
-                                    .hasChildQuery(newChildType,
-                                            QueryBuilders.matchQuery("age", age)),
-                            null, 0, 10);
-            assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
-        }
-        runner.deleteIndex(newIndex);
-    }
-
-    private void test_index_to_newIndex_pc(Node node, String index, String parentType, String childType, String age) throws Exception {
-        String newIndex = "company2";
-        String newParentType = parentType;
-        String newChildType = childType;
-
-        // create an index
-        runner.createIndex(newIndex, (Settings) null);
-        runner.createMapping(newIndex, newChildType,
-                "{\"_parent\":{\"type\":\"" + parentType + "\"}}");
-
-        // reindex
-        try (CurlResponse curlResponse = Curl
-                .post(node, "/" + index + "/_reindex/" + newIndex + "/")
-                .param("wait_for_completion", "true").execute()) {
+                .param("wait_for_completion", "true")
+                .param("url", "http://localhost:" + node.settings().get("http.port"))
+                .execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(map.containsKey("acknowledged"));
             assertNull(map.get("name"));
@@ -637,9 +638,8 @@ public class ReindexingPluginTest extends TestCase {
         // search a certain parent documents
         {
             final SearchResponse searchResponse = runner
-                    .search(newIndex, newParentType, QueryBuilders
-                                    .hasChildQuery(newChildType,
-                                            QueryBuilders.matchQuery("age", age)),
+                    .search(newIndex, newParentType,
+                            QueryBuilders.hasChildQuery(newChildType, QueryBuilders.matchQuery("age", age)),
                             null, 0, 10);
             assertEquals(parentNumber, searchResponse.getHits().getTotalHits());
         }
