@@ -110,10 +110,7 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
         final String fromType = params.param("type");
         final String toIndex = params.param("toindex");
         final String toType = params.param("totype");
-        final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {
-                "_source", "_parent" }
-                : new String[] { "_source" };
-
+        final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {"_source", "_parent" } : new String[] { "_source" };
         final ReindexingListener reindexingListener = new ReindexingListener(
                 url, toIndex, toType, scroll, listener);
 
@@ -129,14 +126,7 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
         } else {
             builder.setExtraSource(content);
         }
-
-        /**
-         * Execute search request builder and store the results in reindexingListener
-         * {@link ActionListener#onResponse(Object)} define action on the response
-         *
-         */
-        builder.execute(reindexingListener);
-
+        builder.execute(reindexingListener);  // async
         reindexingListenerMap.put(reindexingListener.getName(), reindexingListener);
         return reindexingListener.getName();
     }
