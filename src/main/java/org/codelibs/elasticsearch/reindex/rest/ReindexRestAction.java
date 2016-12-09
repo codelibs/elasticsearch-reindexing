@@ -67,8 +67,7 @@ public class ReindexRestAction extends BaseRestHandler {
                 sendResponse(request, channel, params);
                 break;
             case POST:
-                final boolean waitForCompletion = request.paramAsBoolean(
-                        "wait_for_completion", false);
+                final boolean waitForCompletion = request.paramAsBoolean("wait_for_completion", false);
                 name = reindexingService.execute(request,
                         request.hasContent() ? request.content() : null,
                         new ActionListener<Void>() {

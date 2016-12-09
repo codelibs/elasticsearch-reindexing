@@ -34,8 +34,7 @@ import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.threadpool.ThreadPool;
 
-public class ReindexingService extends
-        AbstractLifecycleComponent<ReindexingService> {
+public class ReindexingService extends AbstractLifecycleComponent<ReindexingService> {
 
     private Client client;
 
@@ -91,17 +90,14 @@ public class ReindexingService extends
         }
     }
 
-    public String execute(final Params params, final BytesReference content,
-            final ActionListener<Void> listener) {
+    public String execute(final Params params, final BytesReference content, final ActionListener<Void> listener) {
         final String url = params.param("url");
         final String scroll = params.param("scroll", "1m");
         final String fromIndex = params.param("index");
         final String fromType = params.param("type");
         final String toIndex = params.param("toindex");
         final String toType = params.param("totype");
-        final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {
-                "_source", "_parent" }
-                : new String[] { "_source" };
+        final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {"_source", "_parent" } : new String[] { "_source" };
         final ReindexingListener reindexingListener = new ReindexingListener(
                 url, toIndex, toType, scroll, listener);
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
@@ -115,9 +111,8 @@ public class ReindexingService extends
         } else {
             builder.setExtraSource(content);
         }
-        builder.execute(reindexingListener);
-        reindexingListenerMap.put(reindexingListener.getName(),
-                reindexingListener);
+        builder.execute(reindexingListener);  // async
+        reindexingListenerMap.put(reindexingListener.getName(), reindexingListener);
         return reindexingListener.getName();
     }
 

@@ -83,11 +83,8 @@ public class ReindexingPluginTest extends TestCase {
         runner.refresh();
 
         // search documents
-        {
-            final SearchResponse searchResponse = runner.search(index, type,
-                    null, null, 0, 10);
-            assertEquals(docNumber, searchResponse.getHits().getTotalHits());
-        }
+        final SearchResponse searchResponse = runner.search(index, type, null, null, 0, 10);
+        assertEquals(docNumber, searchResponse.getHits().getTotalHits());
 
         assertTrue(runner.indexExists(index));
 
