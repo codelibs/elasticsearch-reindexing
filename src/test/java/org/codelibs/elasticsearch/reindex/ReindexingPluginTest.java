@@ -94,19 +94,19 @@ public class ReindexingPluginTest extends TestCase {
         test_wait_for_completion(node, index);
 
         runner.ensureGreen();
-        test_index_to_remote_newIndex_withSource(node, index, type);
-
-        runner.ensureGreen();
-        test_index_to_newIndex_withSource(node, index, type);
-
-        runner.ensureGreen();
-        test_index_type_to_newIndex_newType(node, index, type);
+        test_index_to_newIndex(node, index, type);
 
         runner.ensureGreen();
         test_index_type_to_newIndex(node, index, type);
 
         runner.ensureGreen();
-        test_index_to_newIndex(node, index, type);
+        test_index_to_newIndex_withSource(node, index, type);
+
+        runner.ensureGreen();
+        test_index_to_remote_newIndex_withSource(node, index, type);
+
+        runner.ensureGreen();
+        test_index_type_to_newIndex_newType(node, index, type);
 
         runner.ensureGreen();
         test_index_type_to_remote_newIndex_newType(node, index, type);
@@ -144,7 +144,8 @@ public class ReindexingPluginTest extends TestCase {
 
         try (CurlResponse curlResponse = Curl
                 .post(node, "/" + index + "/_reindex/" + newIndex)
-                .param("wait_for_completion", "true").execute()) {
+                .param("wait_for_completion", "true")
+                .execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(map.containsKey("acknowledged"));
             assertNull(map.get("name"));
@@ -201,7 +202,9 @@ public class ReindexingPluginTest extends TestCase {
 
         try (CurlResponse curlResponse = Curl
                 .post(node, "/" + index + "/" + type + "/_reindex/" + newIndex)
-                .param("wait_for_completion", "true").execute()) {
+                .param("wait_for_completion", "true")
+                .param("deletion", "true")
+                .execute()) {
             Map<String, Object> map = curlResponse.getContentAsMap();
             assertTrue(map.containsKey("acknowledged"));
             assertNull(map.get("name"));
