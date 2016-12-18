@@ -41,7 +41,6 @@ import org.elasticsearch.threadpool.ThreadPool;
 
 /**
  * Elasticsearch服务有一个完整的生命周期,并可以加入Listener
- *
  */
 public class ReindexingService extends AbstractLifecycleComponent<ReindexingService> {
 
@@ -53,7 +52,7 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
 
     @Inject
     public ReindexingService(final Settings settings, final Client client,
-            final ThreadPool threadPool) {
+                             final ThreadPool threadPool) {
         super(settings);
         this.client = client;
         this.threadPool = threadPool;
@@ -102,8 +101,8 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
     /**
      * Execute the reindexing
      *
-     * @param params Rest request
-     * @param content Content of rest request in {}
+     * @param params   Rest request
+     * @param content  Content of rest request in {}
      * @param listener is to receive the response back
      * @return
      */
@@ -116,15 +115,10 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
         final String fromType = params.param("type");
         final String toIndex = params.param("toindex");
         final String toType = params.param("totype");
-        final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {"_source", "_parent" } : new String[] { "_source" };
-<<<<<<< HEAD
-        final ReindexingListener reindexingListener = new ReindexingListener(
-                url, toIndex, toType, scroll, listener);
-=======
-        final boolean deletion = params.paramAsBoolean("deletion" , false);
+        final String[] fields = params.paramAsBoolean("parent", true) ? new String[]{"_source", "_parent"} : new String[]{"_source"};
+        final boolean deletion = params.paramAsBoolean("deletion", false);
 
         final ReindexingListener reindexingListener = new ReindexingListener(url, fromIndex, fromType, toIndex, toType, scroll, deletion, listener);
->>>>>>> origin/master
 
         // Create search request builder
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
@@ -168,13 +162,9 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
 
         private volatile String scrollId;
 
-<<<<<<< HEAD
-        ReindexingListener(final String url, final String toIndex, final String toType, final String scroll, final ActionListener<Void> listener) {
-=======
         private boolean deletion;
 
-        ReindexingListener(final String url, final String fromIndex, final String fromType, final String toIndex, final String toType, final String scroll,final boolean deletion, final ActionListener<Void> listener) {
->>>>>>> origin/master
+        ReindexingListener(final String url, final String fromIndex, final String fromType, final String toIndex, final String toType, final String scroll, final boolean deletion, final ActionListener<Void> listener) {
             if (toIndex == null) {
                 throw new ReindexingException("toindex is blank.");
             }
@@ -191,6 +181,7 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
 
         /**
          * Action on the response
+         *
          * @param response
          */
         @Override
@@ -200,11 +191,7 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
                 return;
             }
 
-<<<<<<< HEAD
-            // Get hit result
-=======
             // Get 10 hit results
->>>>>>> origin/master
             final SearchHits searchHits = response.getHits();
             final SearchHit[] hits = searchHits.getHits();
             if (hits.length == 0) { // finished
@@ -276,7 +263,7 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
                 Curl.post(url + "_bulk").onConnect(new ConnectionBuilder() {
                     @Override
                     public void onConnect(CurlRequest curlRequest,
-                            HttpURLConnection connection) {
+                                          HttpURLConnection connection) {
                         connection.setDoOutput(true);
                         try (BufferedWriter writer = new BufferedWriter(
                                 new OutputStreamWriter(connection
@@ -364,13 +351,13 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
             final SearchRequestBuilder builder = client.prepareSearch(fromIndex).setTypes(fromType).setScroll("1m");
             SearchResponse searchResponse = builder.get();
             SearchHit[] hits = searchResponse.getHits().getHits();
-            for (SearchHit hit: hits)
-                System.out.println(hit.getSourceAsString());
+            for (SearchHit hit : hits)
+                client.prepareDelete(hit.index(), hit.type(), hit.id()).get();
             while (hits.length != 0) {
                 searchResponse = client.prepareSearchScroll(searchResponse.getScrollId()).setScroll("1m").get();
                 hits = searchResponse.getHits().getHits();
-                for (SearchHit hit: hits)
-                    System.out.println(hit.getSourceAsString());
+                for (SearchHit hit : hits)
+                    client.prepareDelete(hit.index(), hit.type(), hit.id()).get();
             }
         }
 
