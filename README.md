@@ -50,6 +50,10 @@ Sending reindexing data to a remote cluster, use "url":
 
     $ curl -XPOST localhost:9200/sample/_reindex/newsample/?url=http%3A%2F%2Flocalhost%3A9200%2F
 
+Delete old index after reindexing:
+
+    $ curl -XPOST localhost:9200/sample/_reindex/newsample/?deletion=true
+
 To specify your query,
 
     $ curl -XPOST localhost:9200/sample/_reindex/newsample -d '{"query":{"match_all":{}}}'
