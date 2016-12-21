@@ -7,6 +7,7 @@ import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.codelibs.elasticsearch.reindex.exception.ReindexingException;
@@ -16,8 +17,12 @@ import org.codelibs.elasticsearch.runner.net.CurlRequest;
 import org.codelibs.elasticsearch.runner.net.CurlRequest.ConnectionBuilder;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.ClearScrollResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -34,18 +39,20 @@ import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.threadpool.ThreadPool;
 
-public class ReindexingService extends
-        AbstractLifecycleComponent<ReindexingService> {
+/**
+ * A LifecycleComponent realising all reindexing works
+ */
+public class ReindexingService extends AbstractLifecycleComponent<ReindexingService> {
 
     private Client client;
 
     private Map<String, ReindexingListener> reindexingListenerMap = new ConcurrentHashMap<String, ReindexingService.ReindexingListener>();
 
-    private ThreadPool threadPool;;
+    private ThreadPool threadPool;
 
     @Inject
     public ReindexingService(final Settings settings, final Client client,
-            final ThreadPool threadPool) {
+                             final ThreadPool threadPool) {
         super(settings);
         this.client = client;
         this.threadPool = threadPool;
@@ -91,19 +98,29 @@ public class ReindexingService extends
         }
     }
 
-    public String execute(final Params params, final BytesReference content,
-            final ActionListener<Void> listener) {
+    /**
+     * Execute the reindexing
+     *
+     * @param params   Rest request
+     * @param content  Content of rest request in {}
+     * @param listener is to receive the response back
+     * @return
+     */
+    public String execute(final Params params, final BytesReference content, final ActionListener<Void> listener) {
+
         final String url = params.param("url");
+        // set scroll to 1m if there is no
         final String scroll = params.param("scroll", "1m");
         final String fromIndex = params.param("index");
         final String fromType = params.param("type");
         final String toIndex = params.param("toindex");
         final String toType = params.param("totype");
-        final String[] fields = params.paramAsBoolean("parent", true) ? new String[] {
-                "_source", "_parent" }
-                : new String[] { "_source" };
-        final ReindexingListener reindexingListener = new ReindexingListener(
-                url, toIndex, toType, scroll, listener);
+        final String[] fields = params.paramAsBoolean("parent", true) ? new String[]{"_source", "_parent"} : new String[]{"_source"};
+        final boolean deletion = params.paramAsBoolean("deletion", false);
+
+        final ReindexingListener reindexingListener = new ReindexingListener(url, fromIndex, fromType, toIndex, toType, scroll, deletion, listener);
+
+        // Create search request builder
         final SearchRequestBuilder builder = client.prepareSearch(fromIndex)
                 .setScroll(scroll).addFields(fields);
         if (fromType != null && fromType.trim().length() > 0) {
@@ -115,17 +132,23 @@ public class ReindexingService extends
         } else {
             builder.setExtraSource(content);
         }
-        builder.execute(reindexingListener);
-        reindexingListenerMap.put(reindexingListener.getName(),
-                reindexingListener);
+        builder.execute(reindexingListener);  // async
+        reindexingListenerMap.put(reindexingListener.getName(), reindexingListener);
         return reindexingListener.getName();
     }
 
+    /**
+     * An implementation of ActionListener to action for reindexing
+     */
     private class ReindexingListener implements ActionListener<SearchResponse> {
 
         private AtomicBoolean interrupted = new AtomicBoolean(false);
 
         private String url;
+
+        private String fromIndex;
+
+        private String fromType;
 
         private String toIndex;
 
@@ -139,20 +162,28 @@ public class ReindexingService extends
 
         private volatile String scrollId;
 
-        ReindexingListener(final String url, final String toIndex,
-                final String toType, final String scroll,
-                final ActionListener<Void> listener) {
-            this.url = url != null && !url.endsWith("/") ? url + "/" : url;
-            this.toIndex = toIndex;
-            this.toType = toType;
-            this.scroll = scroll;
-            this.listener = listener;
+        private boolean deletion;
+
+        ReindexingListener(final String url, final String fromIndex, final String fromType, final String toIndex, final String toType, final String scroll, final boolean deletion, final ActionListener<Void> listener) {
             if (toIndex == null) {
                 throw new ReindexingException("toindex is blank.");
             }
-            name = UUID.randomUUID().toString();
+            this.url = url != null && !url.endsWith("/") ? url + "/" : url;
+            this.fromIndex = fromIndex;
+            this.fromType = fromType;
+            this.toIndex = toIndex;
+            this.toType = toType;
+            this.scroll = scroll;
+            this.deletion = deletion;
+            this.listener = listener;
+            this.name = UUID.randomUUID().toString();
         }
 
+        /**
+         * Action on the response
+         *
+         * @param response
+         */
         @Override
         public void onResponse(final SearchResponse response) {
             if (interrupted.get()) {
@@ -160,11 +191,18 @@ public class ReindexingService extends
                 return;
             }
 
+            // Get 10 hit results
             final SearchHits searchHits = response.getHits();
             final SearchHit[] hits = searchHits.getHits();
-            if (hits.length == 0) {
+            if (hits.length == 0) { // finished
                 scrollId = null;
                 reindexingListenerMap.remove(name);
+                if (deletion) {
+                    if (fromType == null)
+                        deleteIndex(fromIndex);
+                    else
+                        deleteIndexType(fromIndex, fromType);
+                }
                 listener.onResponse(null);
             } else {
                 scrollId = response.getScrollId();
@@ -181,8 +219,9 @@ public class ReindexingService extends
             }
         }
 
-        private void sendToLocalCluster(final String scrollId,
-                final SearchHit[] hits) {
+        private void sendToLocalCluster(final String scrollId, final SearchHit[] hits) {
+
+            // prepare bulk request
             final BulkRequestBuilder bulkRequest = client.prepareBulk();
             for (final SearchHit hit : hits) {
                 IndexRequestBuilder builder = client.prepareIndex(toIndex,
@@ -199,6 +238,8 @@ public class ReindexingService extends
                 bulkRequest.add(builder);
             }
 
+            // send bulk request, if success response got, searching the next 10 results using scroll_id
+            // using this listener (inner class) to listen to results
             bulkRequest.execute(new ActionListener<BulkResponse>() {
                 @Override
                 public void onResponse(final BulkResponse bulkResponse) {
@@ -217,13 +258,12 @@ public class ReindexingService extends
             });
         }
 
-        private void sendToRemoteCluster(final String scrollId,
-                final SearchHit[] hits) {
+        private void sendToRemoteCluster(final String scrollId, final SearchHit[] hits) {
             try {
                 Curl.post(url + "_bulk").onConnect(new ConnectionBuilder() {
                     @Override
                     public void onConnect(CurlRequest curlRequest,
-                            HttpURLConnection connection) {
+                                          HttpURLConnection connection) {
                         connection.setDoOutput(true);
                         try (BufferedWriter writer = new BufferedWriter(
                                 new OutputStreamWriter(connection
@@ -291,6 +331,33 @@ public class ReindexingService extends
                 });
             } catch (CurlException e) {
                 onFailure(e);
+            }
+        }
+
+        private void deleteIndex(final String fromIndex) {
+            try {
+                // sync
+                client.admin().indices().delete(new DeleteIndexRequest(fromIndex)).get();
+            } catch (InterruptedException e) {
+                System.err.println("interrupted while deleting index " + fromIndex);
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                System.err.println("failed to deleting index " + fromIndex);
+                e.printStackTrace();
+            }
+        }
+
+        private void deleteIndexType(final String fromIndex, final String fromType) {
+            final SearchRequestBuilder builder = client.prepareSearch(fromIndex).setTypes(fromType).setScroll("1m");
+            SearchResponse searchResponse = builder.get();
+            SearchHit[] hits = searchResponse.getHits().getHits();
+            for (SearchHit hit : hits)
+                client.prepareDelete(hit.index(), hit.type(), hit.id()).get();
+            while (hits.length != 0) {
+                searchResponse = client.prepareSearchScroll(searchResponse.getScrollId()).setScroll("1m").get();
+                hits = searchResponse.getHits().getHits();
+                for (SearchHit hit : hits)
+                    client.prepareDelete(hit.index(), hit.type(), hit.id()).get();
             }
         }
 

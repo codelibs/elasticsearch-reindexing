@@ -11,6 +11,9 @@ import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestModule;
 
+/**
+ * Plugin: An extension point allowing to plug in custom functionality.
+ */
 public class ReindexingPlugin extends Plugin {
     @Override
     public String name() {
@@ -22,12 +25,18 @@ public class ReindexingPlugin extends Plugin {
         return "This plugin copies a new index by reindexing.";
     }
 
-    // for Rest API
+    /**
+     * extend the given module
+     * @param module
+     */
     public void onModule(final RestModule module) {
         module.addRestAction(ReindexRestAction.class);
     }
 
-    // for Service
+    /**
+     * extend node level modules
+     * @return
+     */
     @Override
     public Collection<Module> nodeModules() {
         final Collection<Module> modules =new ArrayList<>();
@@ -35,7 +44,10 @@ public class ReindexingPlugin extends Plugin {
         return modules;
     }
 
-    // for Service
+    /**
+     * extend node level services
+     * @return
+     */
     @Override
     public Collection<Class<? extends LifecycleComponent>> nodeServices() {
         final Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
