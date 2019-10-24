@@ -363,7 +363,7 @@ public class ReindexingService extends AbstractLifecycleComponent<ReindexingServ
 
         @Override
         public void onFailure(final Throwable e) {
-            logger.error("Failed to reindex " + toIndex + ".", e);
+            logger.error("Failed to reindex {}.", toIndex, e);
             delete(name);
             listener.onFailure(e);
         }
